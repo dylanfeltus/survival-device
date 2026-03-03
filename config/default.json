@@ -1,0 +1,19 @@
+{
+  "model_path": "/opt/survival-ai/models/llm/llama-gguf.bin",
+  "max_tokens": 512,
+  "context_k": 6,
+  "temperature": 0.2,
+  "sources_directory": "data/sources",
+  "index_path": "data/index/index.json",
+  "wake_word": false,
+  "audio_enabled": false,
+
+  "chunk_size_chars": 900,
+  "chunk_overlap_chars": 120,
+  "embedding_dim": 384,
+  "embedding_model_path": "/opt/survival-ai/models/embeddings/all-MiniLM-L6-v2",
+  "llm_binary": "llama-cli",
+  "llm_threads": 2,
+  "llm_top_k": 40,
+  "llm_top_p": 0.9
+}
