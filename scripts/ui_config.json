@@ -1,0 +1,10 @@
+{
+  "refresh_rate_ms": 500,
+  "history_max": 10,
+  "scroll_lines": 3,
+  "tab_names": ["SURVIVE", "NAV", "MED", "TECH", "INDEX"],
+  "color_primary": "green",
+  "color_dim": "dark_green",
+  "color_warn": "yellow",
+  "splash_duration_s": 2
+}

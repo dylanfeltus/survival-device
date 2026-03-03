@@ -3,13 +3,90 @@
 ## Vision
 A compact, legible, tactical interface built for glanceability in field conditions. The screen language should prioritize **contrast, status clarity, and one-hand navigation**.
 
-## Core Screen Set
+---
 
-### 1) Boot / Wake Screen
-- Big title: `SURVIVAL AI`
-- Status ticker: battery %, solar input, storage, model ready
-- Button hint row: `OK=Start | BACK=Shutdown | RIGHT=Help`
-- Auto-timeout to home after setup steps
+## IMPLEMENTED: Terminal UI v1 (scripts/ui.py)
+
+### Screen Layout (320x240 = ~40 cols x 15 rows)
+```
+┌─[SURVIVE]─[NAV]─[MED]─[TECH]─[IDX]─┐  ← Tab navigation bar
+│                                       │
+│ > query text here                     │  ← Query input line
+│                                       │
+│ Answer text streams here line by      │  ← Scrollable answer area
+│ line with [1] citation markers        │     with citations
+│                                       │
+│ [1] Title - Source                    │  ← Citation list
+│                                       │
+├───────────────────────────────────────┤
+│ ■ BATT 78%  ■ NORMAL  ■ 14:32       │  ← Status bar
+└───────────────────────────────────────┘
+```
+
+### Implemented Key Bindings
+- **Enter** — Submit query (when text entered)
+- **Left/Right Arrow** — Switch between tabs (SURVIVE, NAV, MED, TECH, INDEX)
+- **Up/Down Arrow** — Scroll answer area (when not in input mode)
+- **Tab** — Toggle between query input mode and answer scroll mode
+- **Page Up** — View older items in history
+- **Page Down** — View newer items in history
+- **Ctrl+C or q** — Quit application
+
+### Features Implemented
+1. **Tab Navigation** — 5 category tabs at top, left/right arrow to switch
+2. **Query Input** — Type query, shows "thinking..." during processing
+3. **Answer Display** — Scrollable area with citations marked [1], [2]...
+4. **Citation Display** — Full citation list below answer (title, source)
+5. **History** — Last 10 Q&A pairs kept, navigate with Page Up/Down
+6. **Status Bar** — Shows battery %, power mode, time, model status
+7. **Green Phosphor Theme** — Green on black, bold highlights, yellow warnings
+8. **Startup Splash** — 2-second SURV-AI loading screen
+9. **Graceful Fallbacks** — Simple print mode if curses unavailable
+10. **Error Handling** — Shows errors in UI if chat backend fails
+
+### Integration
+- Calls `scripts/chat.py --json "query"` via subprocess
+- Parses JSON response for answer, citations, confidence
+- Reads battery state from `data/runtime/state.json` if available
+- Configuration loaded from `scripts/ui_config.json`
+
+### Color Scheme
+- **Primary text:** Green (curses.COLOR_GREEN)
+- **Dim text:** Dark green
+- **Highlights:** Bright green + bold (active tab, query input)
+- **Warnings:** Yellow (thinking state, errors)
+- **Status bar:** Reverse video (green background, black text)
+- **Background:** Black
+
+### Config (scripts/ui_config.json)
+```json
+{
+  "refresh_rate_ms": 500,
+  "history_max": 10,
+  "scroll_lines": 3,
+  "tab_names": ["SURVIVE", "NAV", "MED", "TECH", "INDEX"],
+  "color_primary": "green",
+  "color_dim": "dark_green",
+  "color_warn": "yellow",
+  "splash_duration_s": 2
+}
+```
+
+### Usage
+```bash
+cd /path/to/survival-device
+python3 scripts/ui.py
+```
+
+Works in:
+- Standard terminal (macOS Terminal, iTerm2, etc.)
+- Linux TTY / framebuffer console
+- SSH sessions
+- Falls back to simple print mode if curses unavailable
+
+---
+
+## FUTURE IDEAS (Not Yet Implemented)
 
 ### 2) Home / Status Dashboard
 - Top-left: Time + temperature from onboard sensor
@@ -19,15 +96,6 @@ A compact, legible, tactical interface built for glanceability in field conditio
   - **Storage**: source pack, index version
   - **Audio**: on/off indicator
 - Right rail shortcuts: `QUERY`, `MAP`, `SUPPLY`, `SHELTER`
-
-### 3) Query Screen (Chat)
-- Query input row (on rotary + enter): voice wake alternative
-- Last answer card with bullet summary + citation chips
-- `SWIPE/UP` cycles previous answers
-- Footer actions:
-  - `PLAY` = read aloud (if `audio_enabled`)
-  - `COPY` = save to favorites
-  - `SRC` = expanded sources panel
 
 ### 4) Emergency Checklist Category View
 - Categories as quick tiles:
@@ -57,52 +125,23 @@ A compact, legible, tactical interface built for glanceability in field conditio
   - power sample (from sensor hook)
 - Trigger from hold-right button for 2s
 
-## Interaction Model (Buttons/Controls)
-
-Assumed controls: `UP`, `DOWN`, `LEFT`, `RIGHT`, `ENTER`, `BACK`
-
-### Global mapping
-- `UP/DOWN`: navigate menu lists / scroll text
-- `LEFT/RIGHT`: tabs and screens
-- `ENTER`: confirm / send
-- `BACK`: previous screen or cancel
-- `SHORT HOLD ENTER (1s)`: open context menu
-
-### Home
-- `RIGHT`: open Query
-- `LEFT`: open Logs/Diagnostics
-- `UP`: emergency quick actions
-- `DOWN`: last answer
-
-### Query
-- `ENTER`: speak/send dictated/typed query
-- `RIGHT`: toggle wake-word mode
-- `LEFT`: open source citations
-- `BACK`: return home
-
-### Checklists
-- `ENTER`: run checklist step
-- `DOWN`: next step
-- `BACK`: exit checklist (with confirm)
-
-## Citations in UI
-- Every answer shows small source chips `[1][2][3]`
-- Selecting a chip opens mini drawer:
+## Citations in UI (Implemented)
+- Every answer shows citation markers [1], [2], [3]
+- Full citation list displays below answer with:
   - Title
-  - Source + license
-  - Local path/URL
-  - Ingest timestamp + hash
+  - Source
+  - Confidence score (future: add license, URL)
 
-## Visual Language
-- **Color:** `#0a4d2b` (bg), `#4eb56d` (primary), `#f5f59a` (warn), `#f7f7f7` (text)
-- **Typography:** uppercase for command headers, lowercase for body
-- **Grid:** 8px rhythm, heavy card borders, sparse glow accents
-- **Motion:** minimal; no expensive transitions to preserve battery
+## Visual Language (Implemented)
+- **Color:** Green on black (classic phosphor terminal)
+- **Typography:** Mixed case, bold for highlights
+- **Layout:** Box drawing characters for clean borders
+- **Motion:** Minimal; instant screen updates to preserve battery
 
-## v1 Defaults to Keep it Safe
+## v1 Safety Defaults (Maintained)
 - No automatic online query fallback
 - No hidden data upload
-- Explicit “Source required for each claim” rule in renderer
-- No geolocation unless user manually toggles
-- No microphone auto-listen by default (`wake_word: false`)
+- Explicit citation display for every answer
+- No geolocation
+- No microphone auto-listen (`wake_word: false` in config)
 
