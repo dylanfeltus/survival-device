@@ -15,5 +15,23 @@
   "llm_binary": "llama-cli",
   "llm_threads": 2,
   "llm_top_k": 40,
-  "llm_top_p": 0.9
+  "llm_top_p": 0.9,
+  "llm_context_tokens": 1024,
+  "llm_extra_args": [],
+
+  "min_confidence": 0.28,
+  "fallback_mode": "retrieval_only",
+
+  "battery_monitor_enabled": true,
+  "battery_warn_pct": 20,
+  "battery_critical_pct": 8,
+
+  "allow_unknown_licenses": false,
+  "default_license": "unknown",
+  "blocked_license_keywords": [
+    "all-rights-reserved",
+    "copyrighted",
+    "proprietary",
+    "restricted"
+  ]
 }

@@ -68,6 +68,31 @@ def parse_csv_sources(path: Path) -> List[Dict[str, Any]]:
     return items
 
 
+
+
+def normalize_license(value: str) -> str:
+    return (value or "").strip().lower()
+
+
+def is_license_acceptable(meta: Dict[str, Any], cfg: Dict[str, Any]) -> bool:
+    allow_unknown = bool(cfg.get("allow_unknown_licenses", False))
+    if not meta:
+        return allow_unknown
+
+    license_value = normalize_license(str(meta.get("license", "unknown")))
+    blocked = cfg.get("blocked_license_keywords", [])
+    if not isinstance(blocked, list):
+        blocked = []
+
+    if any(keyword in license_value for keyword in blocked):
+        return False
+
+    if license_value in ("", "unknown", "other", "n/a"):
+        return allow_unknown
+
+    return True
+
+
 @dataclass
 class VectorModel:
     dim: int
@@ -204,6 +229,7 @@ def build_index(
     docs_out: List[Dict[str, Any]] = []
     chunk_id = 0
 
+    seen = set()
     for doc in sources:
         src_path = Path(doc.get("path", "")).expanduser()
         if not src_path.is_absolute():
@@ -213,18 +239,35 @@ def build_index(
             print(f"[WARN] Missing source path: {src_path}")
             continue
 
+        # skip duplicate paths
+        src_key = str(src_path.resolve())
+        if src_key in seen:
+            print(f"[WARN] Duplicate source path skipped: {src_path}")
+            continue
+        seen.add(src_key)
+
         text = file_to_text(src_path)
         if not text.strip():
             print(f"[WARN] Empty file, skipped: {src_path}")
             continue
 
         doc_id = hashlib.md5(str(src_path).encode("utf-8")).hexdigest()
+        title = doc.get("title", src_path.stem)
+        source_name = doc.get("source", "unknown")
+
+        if not title:
+            title = src_path.stem
+
+        doc_license = str(doc.get("license", "unknown")).strip()
+        if not doc_license:
+            doc_license = cfg.get("default_license", "unknown")
+
         doc_record = {
             "doc_id": doc_id,
             "path": str(src_path),
-            "title": doc.get("title", src_path.stem),
-            "source": doc.get("source", "unknown"),
-            "license": doc.get("license", "unknown"),
+            "title": title,
+            "source": source_name,
+            "license": doc_license,
             "license_url": doc.get("license_url", ""),
             "source_url": doc.get("source_url", ""),
             "language": doc.get("language", "en"),
@@ -315,7 +358,23 @@ def main() -> int:
         print("No source docs found in manifest.")
         return 2
 
-    print(f"Loaded {len(sources)} source rows")
+    allow_unknown = bool(base_cfg.get("allow_unknown_licenses", False))
+    blocked = base_cfg.get("blocked_license_keywords", ["all-rights-reserved", "copyrighted", "proprietary", "restricted"])
+
+    validated = []
+    skipped = 0
+    for row in sources:
+        if is_license_acceptable(row, base_cfg):
+            validated.append(row)
+            continue
+        skipped += 1
+        print(f"[WARN] Skipping source with blocked license: {row.get('license', 'unknown')} path={row.get('path','unknown')}")
+
+    print(f"Loaded {len(validated)} source rows ({skipped} blocked/invalid) from manifest")
+    if allow_unknown:
+        print("[INFO] allow_unknown_licenses=true (unsafe policy override).")
+
+    sources = validated
     summary = build_index(
         sources=sources,
         sources_root=sources_dir,
