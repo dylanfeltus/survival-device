@@ -1,0 +1,63 @@
+{
+  "name": "Core Survival Knowledge Pack",
+  "version": "1.0",
+  "description": "Essential survival reference materials covering water, fire, shelter, medical, navigation, food, and signaling",
+  "documents": [
+    {
+      "path": "water-purification.md",
+      "title": "Water Purification and Procurement",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-critical"
+    },
+    {
+      "path": "fire-starting.md",
+      "title": "Fire Starting Techniques",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-critical"
+    },
+    {
+      "path": "shelter-building.md",
+      "title": "Emergency Shelter Building",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-critical"
+    },
+    {
+      "path": "first-aid-basics.md",
+      "title": "First Aid Basics",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "medical-critical"
+    },
+    {
+      "path": "navigation.md",
+      "title": "Navigation and Orientation",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-high"
+    },
+    {
+      "path": "food-foraging.md",
+      "title": "Food Foraging and Procurement",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-medium"
+    },
+    {
+      "path": "signaling-rescue.md",
+      "title": "Signaling and Rescue",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "survival-high"
+    },
+    {
+      "path": "emergency-medical.md",
+      "title": "Emergency Medical Situations",
+      "source": "Original - based on US Army FM 21-76/FM 3-05.70 principles",
+      "license": "public domain",
+      "section": "medical-critical"
+    }
+  ]
+}

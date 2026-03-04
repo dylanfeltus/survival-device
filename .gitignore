@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Virtual environment
+venv/
+
+# Runtime data
+data/runtime/
+
+# Logs
+logs/*.jsonl
+logs/*.log
+
+# Environment
+.env
+
+# OS
+.DS_Store
+
+# Node (if used)
+node_modules/
