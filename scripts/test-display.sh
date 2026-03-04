@@ -121,8 +121,8 @@ else
     echo "  ───────────────────────────────────────────────────────────"
     
     if [ -f "$ROOT_DIR/data/index/index.json" ]; then
-        CHUNK_COUNT=$(python3 -c "import json; print(json.load(open('$ROOT_DIR/data/index/index.json'))['chunk_count'])" 2>/dev/null || echo "unknown")
-        DOC_COUNT=$(python3 -c "import json; print(json.load(open('$ROOT_DIR/data/index/index.json'))['document_count'])" 2>/dev/null || echo "unknown")
+        CHUNK_COUNT=$(python3 -c "import json; d=json.load(open('$ROOT_DIR/data/index/index.json')); print(len(d.get('chunks',[])))" 2>/dev/null || echo "unknown")
+        DOC_COUNT=$(python3 -c "import json; d=json.load(open('$ROOT_DIR/data/index/index.json')); print(len(d.get('documents',[])))" 2>/dev/null || echo "unknown")
         echo "  ✓ Index loaded:       $DOC_COUNT documents, $CHUNK_COUNT chunks"
     else
         echo "  ✗ No index found      Run ingest_booklist.py first"
