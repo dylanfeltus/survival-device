@@ -1,0 +1,302 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          SURVIVAL AI DEVICE ENCLOSURE — EXPLODED ASSEMBLY VIEW             ║
+║                    (Not to scale — conceptual layout)                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+                           ╔══════════════════════╗
+                           ║   TOP SHELL          ║  ← LCD window cutout
+                           ║                      ║    Rotary encoder hole
+                           ║   ┌────────────┐    ║    M3 screw holes (4×)
+                           ║   │ LCD WINDOW │ ●  ║    Ventilation slots
+                           ║   │  (57×43mm) │    ║
+                           ║   └────────────┘    ║
+                           ╚══════════════════════╝
+                                     ▲
+                                     │  (Screws connect here)
+                                     │
+                           ╔══════════════════════╗
+                           ║  Waveshare 2.8" LCD  ║  ← HAT-style board
+                           ║  ┌────────────────┐  ║    Connects via 26-pin GPIO
+                           ║  │ 2.8" Display  │  ║    PCB: 65×56mm
+                           ║  │ Active Screen │  ║
+                           ║  └────────────────┘  ║
+                           ║   GPIO Pins (26)     ║
+                           ╚══════════════════════╝
+                                     ▲
+                                     │  (GPIO header connects through)
+                                     │
+                           ╔══════════════════════╗
+                           ║ Orange Pi Zero 2W    ║  ← Main SBC
+                           ║  ┌──────────────┐    ║    PCB: 65×30mm
+                           ║  │ Quad-core    │    ║    Ports on edge:
+                           ║  │ Cortex-A53   │ ■■ ║      ■ USB-C power
+                           ║  │ 1GB RAM      │ ■■ ║      ■ Micro-HDMI
+                           ║  └──────────────┘ ■■ ║      ■ USB 2.0
+                           ║   40-pin GPIO header ║
+                           ╚══════════════════════╝
+                                     ▲
+                                     │  (Connects via GPIO/pogo pins)
+                                     │
+                           ╔══════════════════════╗
+                           ║  UPS HAT B (Pi Zero) ║  ← Power management board
+                           ║  ┌──────────────┐    ║    PCB: 65×30mm
+                           ║  │ Charging IC  │    ║    Manages 18650 batteries
+                           ║  │ 5V Regulator │    ║    Provides stable 5V output
+                           ║  └──────────────┘    ║
+                           ║   Pogo/GPIO pins     ║
+                           ╚══════════════════════╝
+                                     ▲
+                                     │  (Battery terminals connect below)
+                                     │
+                           ╔══════════════════════╗
+                           ║  Battery Holder      ║  ← Holds 2× 18650 cells
+                           ║   ┌─────┐  ┌─────┐  ║    Side-by-side
+                           ║   │18650│  │18650│  ║    Total: ~65×36×18mm
+                           ║   │ [+] │  │ [+] │  ║    ~20mm holder height
+                           ║   │  │  │  │  │  │  ║
+                           ║   └──┴──┘  └──┴──┘  ║
+                           ╚══════════════════════╝
+                                     ▲
+                                     │
+                                     │
+                           ╔══════════════════════╗
+                           ║   BOTTOM SHELL       ║  ← Base enclosure
+                           ║                      ║    M3 heat-set inserts (4×)
+                           ║  [vent] [vent]       ║    Port cutouts (side)
+                           ║                      ║    Ventilation slots
+                           ║     (Standoffs)      ║    Lanyard loop
+                           ║                      ║
+                           ╚══════════════════════╝
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                              SIDE VIEW (CUTAWAY)                           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ┌────────────────────────────────────────────┐ ← Top shell (2.5mm wall)
+    │ ┌─────────────────────────────────┐        │
+    │ │      LCD Display Window         │   ●    │ ← Rotary encoder
+    │ └─────────────────────────────────┘        │
+    ├────────────────────────────────────────────┤
+    │   ╔════════════════════════════╗           │ ← LCD HAT (65×56mm)
+    │   ║ Waveshare 2.8" LCD         ║           │
+    │   ╚═╤══════════════════════════╝           │
+    │     │ GPIO pins (26-pin)                   │
+    ├─────┴──────────────────────────────────────┤
+    │   ╔════════════════════════════╗           │ ← Orange Pi Zero 2W
+    │   ║ Orange Pi Zero 2W      ■■■ ║═══════════╡ ← Ports (USB-C, HDMI, USB)
+    │   ╚═╤══════════════════════════╝           │
+    │     │ GPIO header (40-pin)                 │
+    ├─────┴──────────────────────────────────────┤
+    │   ╔════════════════════════════╗           │ ← UPS HAT B
+    │   ║ UPS HAT B                  ║           │
+    │   ╚═╤══════════════════════════╝           │
+    │     │ Power connection                     │
+    ├─────┴──────────────────────────────────────┤
+    │    ┌──────────┐    ┌──────────┐           │ ← 18650 Batteries
+    │    │  18650   │    │  18650   │           │   (side-by-side)
+    │    │  Battery │    │  Battery │           │
+    │    └──────────┘    └──────────┘           │
+    └────────────────────────────────────────────┘ ← Bottom shell
+         ▼ ▼ ▼                        ▼
+        [Vent slots]                [Port access]
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                              TOP VIEW (LAYOUT)                             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ╔═══════════════════════════════════════════════════════════╗
+    ║                                                  ○        ║ ← Lanyard
+    ║   [===]  ┌─────────────────────────┐  [===]              ║   loop
+    ║          │                         │                     ║
+    ║          │    LCD Display Window   │        ●           ║ ← Rotary
+    ║          │      (57 × 43 mm)       │                     ║   encoder
+    ║   ●      │                         │              ●      ║
+    ║          └─────────────────────────┘                     ║
+    ║                                                           ║
+    ║   [===]                                        [===]     ║ ← Vent
+    ║                                                           ║   slots
+    ║                                                           ║
+    ║   ●                                                  ●    ║ ← M3 screw
+    ╚═══════════════════════════════════════════════════════════╝   locations
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          BOTTOM VIEW (PORT ACCESS)                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ╔═══════════════════════════════════════════════════════════╗
+    ║   ●                                                  ●    ║
+    ║                                                           ║
+    ║   [===]                                        [===]     ║ ← Vent
+    ║                                                           ║   slots
+    ║          ┌─────────────────────────┐                     ║
+    ║          │   Battery Compartment   │                     ║
+    ║   ●      │   (2× 18650 access)     │              ●      ║ ← M3 heat-
+    ║          └─────────────────────────┘                     ║   set inserts
+    ║                                                           ║
+    ║   [===]                                        [===]     ║
+    ║                                               ■■■        ║ ← Port
+    ║                                                           ║   access
+    ║   ●                                                  ●    ║   (side)
+    ╚═══════════════════════════════════════════════════════════╝
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                            ASSEMBLY HARDWARE                               ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    M3 HEAT-SET INSERTS (4×)              M3 SCREWS (4×)
+    ┌───────┐                             ┌───┐
+    │ ═════ │ ← Knurled exterior          │ ● │ ← Button head
+    │  ║ ║  │   OD: 4.5mm                 │ │ │   10mm length
+    │  ║ ║  │   Length: 4-5mm             └─┴─┘
+    └───────┘                               Screws go through top shell
+     Install in bottom shell                into heat-set inserts
+     with soldering iron (220°C)
+
+    M2.5 SCREWS (8×)                      ALIGNMENT PINS (2×)
+    ┌─┐                                   ┌─────┐
+    │●│ ← Small head                      │  │  │ ← 3mm diameter
+    └┬┘   6mm length                      │  │  │   2mm height
+     │    For PCB mounting                └─────┘
+     │                                     Molded into bottom shell
+                                           Fit into top shell holes
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                        COMPONENT STACK HEIGHTS                             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    Total Internal Height: ~47mm
+
+    ├─ Bottom shell floor: 2mm
+    ├─ Battery compartment: 18-20mm (battery + holder)
+    ├─ UPS HAT PCB: 1.6mm
+    ├─ Spacing/standoffs: 2mm
+    ├─ Orange Pi Zero PCB: 1.6mm + 3mm (components)
+    ├─ GPIO pins/standoffs: 8mm
+    ├─ LCD HAT PCB: 1.6mm + 3mm (components)
+    └─ Top shell clearance: 5mm
+
+    External dimensions: 75mm × 65mm × 52mm
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          ASSEMBLY SEQUENCE                                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    STEP 1: Prepare Bottom Shell
+            ↓
+            Install 4× M3 heat-set inserts in corner bosses
+            Use soldering iron at 220°C (PLA) or 250°C (PETG)
+
+    STEP 2: Install Batteries
+            ↓
+            Place 2× 18650 batteries in compartment (side-by-side)
+            Ensure polarity matches battery holder markings
+
+    STEP 3: Mount UPS HAT B
+            ↓
+            Connect to battery holder terminals
+            Secure to standoffs with M2.5 screws
+
+    STEP 4: Install Orange Pi Zero 2W
+            ↓
+            Connect to UPS HAT via GPIO/pogo pins
+            Align ports with side cutouts
+            Secure with M2.5 screws
+
+    STEP 5: Connect LCD HAT
+            ↓
+            Attach to Orange Pi 26-pin GPIO header
+            Verify display window alignment
+            Secure to top standoffs with M2.5 screws
+
+    STEP 6: Mount Rotary Encoder (in Top Shell)
+            ↓
+            Thread shaft through hole
+            Secure body with hot glue or tape
+            Attach knob to shaft
+
+    STEP 7: Close Enclosure
+            ↓
+            Route wires carefully (avoid pinching)
+            Align top shell with alignment pins
+            Insert 4× M3 screws and tighten diagonally
+
+    STEP 8: Final Testing
+            ↓
+            Connect USB-C power
+            Verify display, ports, and encoder function
+            Thermal test (30 minutes runtime)
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         TROUBLESHOOTING GUIDE                              ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ISSUE: Case won't close
+    FIX:   ├─ Check for wire pinching at shell interface
+           ├─ Verify all components are seated properly
+           └─ Check for warped print (reheat and flatten if needed)
+
+    ISSUE: LCD doesn't align with window
+    FIX:   ├─ Loosen PCB mounting screws and adjust position
+           ├─ Add shims under PCB standoffs
+           └─ Modify .scad file `lcd_active_width/height` variables
+
+    ISSUE: Ports not accessible
+    FIX:   ├─ Verify Orange Pi is oriented correctly (180° check)
+           ├─ File/enlarge port cutouts if needed
+           └─ Check PCB standoff heights
+
+    ISSUE: Overheating
+    FIX:   ├─ Verify ventilation slots are clear
+           ├─ Add heatsink to Orange Pi SoC chip
+           └─ Reduce CPU governor to powersave mode
+
+    ISSUE: Screws won't tighten (stripped threads)
+    FIX:   ├─ Use heat-set inserts (essential for reusability)
+           ├─ Don't overtighten — plastic has limits
+           └─ If stripped, fill hole with epoxy and re-drill
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                          DESIGN PHILOSOPHY                                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ┌─────────────────────────────────────────────────────────────┐
+    │  "Built like a tool, not a toy."                            │
+    │                                                              │
+    │  This enclosure prioritizes:                                │
+    │  • Repairability (screws, not glue)                        │
+    │  • Durability (thick walls, rounded edges)                 │
+    │  • Field-serviceable (heat-set inserts, modular)           │
+    │  • Functional aesthetic (visible structure, tactical vibe) │
+    │                                                              │
+    │  It does NOT prioritize:                                    │
+    │  • Minimal size (survival device, not a phone)             │
+    │  • Sleek appearance (form follows function)                │
+    │  • Waterproofing out-of-box (achievable with mods)         │
+    └─────────────────────────────────────────────────────────────┘
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                               LEGEND                                       ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+    ●  = Screw hole / mounting point
+    ■  = Port cutout (USB, HDMI, etc.)
+    ○  = Lanyard loop
+    [===] = Ventilation slots
+    ╔═╗ = PCB / electronic component
+    ═══ = Connection / interface
+    ┌─┐ = Enclosure shell
+    ▼  = Directional indicator
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║  END OF ASSEMBLY DIAGRAM — Print this file for workshop reference         ║
+╚════════════════════════════════════════════════════════════════════════════╝
