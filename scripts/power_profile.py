@@ -18,6 +18,7 @@ Run directly for diagnostics:
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 import shutil
@@ -34,7 +35,27 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 # INA219 register map (TI INA219 datasheet; same constants as Adafruit_INA219).
 INA219_REG_SHUNT_VOLTAGE = 0x01  # signed 16-bit, LSB = 10 uV
 INA219_REG_BUS_VOLTAGE = 0x02    # bits 15..3 = voltage, LSB = 4 mV
-I2C_SLAVE = 0x0703               # linux/i2c-dev.h
+I2C_RDWR = 0x0707                # linux/i2c-dev.h: combined transfer
+I2C_M_RD = 0x0001                # linux/i2c.h: read message
+# A single 3.7 V LiPo never legitimately reads above ~4.25 V; anything higher means a
+# corrupted/misdirected read, so it is rejected instead of being reported as "100%".
+MAX_PLAUSIBLE_CELL_V = 4.5
+
+
+class _I2cMsg(ctypes.Structure):  # struct i2c_msg
+    _fields_ = [
+        ("addr", ctypes.c_uint16),
+        ("flags", ctypes.c_uint16),
+        ("len", ctypes.c_uint16),
+        ("buf", ctypes.POINTER(ctypes.c_uint8)),
+    ]
+
+
+class _I2cRdwrData(ctypes.Structure):  # struct i2c_rdwr_ioctl_data
+    _fields_ = [
+        ("msgs", ctypes.POINTER(_I2cMsg)),
+        ("nmsgs", ctypes.c_uint32),
+    ]
 
 # On the Allwinner H616/H618 (Orange Pi Zero 2W), header pins 3/5 (PI8/PI7) are the
 # "i2c1" controller at 0x05002400. The board DTS defines no i2c aliases, so the
@@ -168,12 +189,26 @@ def resolve_i2c_bus(cfg: Dict[str, Any]) -> Tuple[Optional[int], str]:
     )
 
 
-def _i2c_read_u16(fd: int, reg: int) -> int:
-    os.write(fd, bytes([reg]))
-    data = os.read(fd, 2)
-    if len(data) != 2:
-        raise OSError(f"short read from register 0x{reg:02x}")
-    return (data[0] << 8) | data[1]  # INA219 registers are MSB first
+def _i2c_read_u16(fd: int, addr: int, reg: int) -> int:
+    """Read one 16-bit register as a single combined I2C transaction.
+
+    Pointer write + repeated start + 2-byte read go to the kernel in one I2C_RDWR
+    ioctl, so another process (e.g. chat.py and the power daemon both polling the
+    battery) cannot move the INA219's register pointer between selecting the
+    register and reading it.
+    """
+    import fcntl  # Linux only; caller already checked availability
+
+    wbuf = (ctypes.c_uint8 * 1)(reg)
+    rbuf = (ctypes.c_uint8 * 2)()
+    msgs = (_I2cMsg * 2)(
+        _I2cMsg(addr, 0, 1, ctypes.cast(wbuf, ctypes.POINTER(ctypes.c_uint8))),
+        _I2cMsg(addr, I2C_M_RD, 2, ctypes.cast(rbuf, ctypes.POINTER(ctypes.c_uint8))),
+    )
+    xfer = _I2cRdwrData(ctypes.cast(msgs, ctypes.POINTER(_I2cMsg)), 2)
+    if fcntl.ioctl(fd, I2C_RDWR, xfer) != 2:
+        raise OSError(f"incomplete I2C transfer for register 0x{reg:02x}")
+    return (rbuf[0] << 8) | rbuf[1]  # INA219 registers are MSB first
 
 
 def read_ina219(cfg: Dict[str, Any]) -> Tuple[Optional[Dict[str, float]], str]:
@@ -185,7 +220,7 @@ def read_ina219(cfg: Dict[str, Any]) -> Tuple[Optional[Dict[str, float]], str]:
     Returns (reading or None, note).
     """
     try:
-        import fcntl  # Linux only
+        import fcntl  # noqa: F401  (Linux only; used by _i2c_read_u16)
     except ImportError:
         return None, "fcntl unavailable (not Linux)"
 
@@ -210,9 +245,8 @@ def read_ina219(cfg: Dict[str, Any]) -> Tuple[Optional[Dict[str, float]], str]:
         return None, f"cannot open {dev}: {exc}"
 
     try:
-        fcntl.ioctl(fd, I2C_SLAVE, addr)
-        bus_raw = _i2c_read_u16(fd, INA219_REG_BUS_VOLTAGE)
-        shunt_raw = _i2c_read_u16(fd, INA219_REG_SHUNT_VOLTAGE)
+        bus_raw = _i2c_read_u16(fd, addr, INA219_REG_BUS_VOLTAGE)
+        shunt_raw = _i2c_read_u16(fd, addr, INA219_REG_SHUNT_VOLTAGE)
     except OSError as exc:
         return None, f"INA219 not responding at 0x{addr:02x} on {dev}: {exc}. {POGO_HINT}"
     finally:
@@ -260,6 +294,8 @@ def _ina219_state(cfg: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], str]:
     if voltage < 2.5:
         # A floating/absent cell or a bad pogo contact usually reads ~0 V.
         return None, f"INA219 bus voltage {voltage:.2f} V is implausible for a LiPo (battery disconnected?)"
+    if voltage > MAX_PLAUSIBLE_CELL_V:
+        return None, f"INA219 bus voltage {voltage:.2f} V is implausible for a single LiPo cell (bad read?)"
 
     shunt_mv = reading["shunt_mv"]
     # TODO(verify on hardware): which shunt-voltage sign means "charging" depends on how
