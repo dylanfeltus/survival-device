@@ -156,7 +156,7 @@ fi
 
 # 8. Optional: download the recommended GGUF model
 if [ -n "$DOWNLOAD_MODEL" ]; then
-    "${ROOT_DIR}/scripts/download_model.sh" "$DOWNLOAD_MODEL" || warn "Model download failed; offline retrieval mode still works."
+    "${ROOT_DIR}/scripts/download_model.sh" "$DOWNLOAD_MODEL" --set-config || warn "Model download failed; offline retrieval mode still works."
 else
     echo ""
     echo "  LLM model (optional): ./scripts/download_model.sh   # Qwen3 1.7B Q4_K_M -> models/"
