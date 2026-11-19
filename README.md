@@ -391,7 +391,7 @@ A: No. This is reference material only. Verify with professionals for critical d
 
 MIT License — see [LICENSE](LICENSE) file for details.
 
-Copyright © 2024 Stratus Labs, LLC
+Copyright © 2026 Stratus Labs, LLC
 
 ---
 
@@ -411,4 +411,4 @@ Built with:
 
 **Version:** 1.0.0
 
-**Last Updated:** March 2024
+**Last Updated:** November 2026
