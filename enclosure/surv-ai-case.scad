@@ -3,6 +3,29 @@
 // Rugged 3D-printable case for Orange Pi Zero 2W + Waveshare LCD + UPS HAT
 // Pip-Boy inspired tactical field device aesthetic
 // ============================================================================
+//
+// TODO(hardware update): this geometry still models the ORIGINAL concept
+// (Waveshare 2.8" LCD HAT on the header + 2x18650 cells). The real build is:
+//   - Orange Pi Zero 2W 4GB (65x30mm PCB) with a soldered/press-fit 40-pin header
+//   - SeenGreat Pi Zero UPS HAT (B) Rev 1.5 under the Pi on spring pogo pins,
+//     with USB-C input + 5-24V solar terminal block + MPPT DIP switch (needs
+//     side cutouts / access) and a power switch (needs access)
+//   - flat 3.7V LiPo pouch cell on a 2-pin lead (replaces the 18650 bay)
+//   - generic red-PCB 2.8" SPI TFT, jumper-wired (NOT a HAT): mounted to the
+//     top shell, not to the header
+//   - small round SPI TFT (blue breakout, probably GC9A01) -> needs a round window
+//   - rotary encoder module with push button
+// Measure the real parts and update these parameters rather than trusting the
+// current values (deliberately NOT guessed here):
+//   - battery_* -> pouch cell L x W x thickness (+ foam padding)
+//   - UPS HAT PCB outline, mounting holes, standoff height (sets pogo-pin
+//     compression: too tall = intermittent INA219/power contact)
+//   - lcd_active_width/height, pcb_width_lcd + mounting holes of the red 2.8" module
+//   - new: round display diameter, active area and mounting holes
+//   - port cutouts: HAT USB-C, solar terminal, power switch; Pi port positions
+//   - case_height: Dupont jumper housings above the header need extra clearance
+// See enclosure/README.md and docs/wiring.md.
+// ============================================================================
 
 // ============================================================================
 // RENDER SELECTOR - Comment/uncomment to choose what to render

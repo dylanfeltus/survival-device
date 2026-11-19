@@ -6,15 +6,31 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Pick the framebuffer: $FB if set, else the SPI TFT (fbtft "fb_ili9341" or a DRM
+# ili9341/mipi-dbi driver), else /dev/fb0. On the Zero 2W the TFT is often /dev/fb1
+# because HDMI owns fb0.
+FB="${FB:-}"
+if [ -z "$FB" ]; then
+    for d in /sys/class/graphics/fb*; do
+        [ -e "$d/name" ] || continue
+        case "$(cat "$d/name" 2>/dev/null)" in
+            *ili9341*|*mipi-dbi*|*mi0283qt*) FB="/dev/${d##*/}"; break ;;
+        esac
+    done
+fi
+FB="${FB:-/dev/fb0}"
+
 # Check for framebuffer
-if [ -e /dev/fb0 ]; then
-    echo "[INFO] Framebuffer detected (/dev/fb0)"
-    
+if [ -e "$FB" ]; then
+    echo "[INFO] Framebuffer detected ($FB: $(cat /sys/class/graphics/${FB##*/}/name 2>/dev/null || echo unknown))"
+    SIZE="$(cat /sys/class/graphics/${FB##*/}/virtual_size 2>/dev/null || echo 320,240)"
+
     # Create simple green-on-black test pattern
     if command -v python3 >/dev/null 2>&1; then
-        python3 - <<'PY'
+        FB_SIZE="$SIZE" python3 - <<'PY'
 # Simple green-on-black test pattern for framebuffer
-w, h = 320, 240
+import os
+w, h = (int(x) for x in os.environ.get("FB_SIZE", "320,240").split(",")[:2])
 
 pixels = []
 for y in range(h):
@@ -43,7 +59,7 @@ PY
         
         # Try to display it
         if command -v fbi >/dev/null 2>&1; then
-            fbi -d /dev/fb0 -T 1 -noverbose /tmp/survival_test.ppm 2>/dev/null
+            fbi -d "$FB" -T 1 -noverbose /tmp/survival_test.ppm 2>/dev/null
             echo "[INFO] Test pattern rendered via fbi"
         elif command -v fim >/dev/null 2>&1; then
             fim -q -a /tmp/survival_test.ppm 2>/dev/null
@@ -130,7 +146,7 @@ else
     
     echo ""
     echo "  Status:              All systems nominal"
-    echo "  Framebuffer:         Not detected (/dev/fb0 missing)"
+    echo "  Framebuffer:         Not detected ($FB missing)"
     echo "  Display Mode:        Terminal"
     echo ""
     echo "╚════════════════════════════════════════════════════════════╝"

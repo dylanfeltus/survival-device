@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,37 @@ from typing import Any, Dict, List, Sequence
 
 from ingest_booklist import VectorModel, build_model, load_config
 from power_profile import assess
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+def repo_path(value: str) -> Path:
+    """Resolve a config path: absolute paths as-is, relative paths against the repo root.
+
+    Lets chat.py work no matter which directory ui.py / systemd starts it from.
+    """
+    p = Path(value).expanduser()
+    return p if p.is_absolute() else ROOT_DIR / p
+
+
+def wants_no_think(cfg: Dict[str, Any]) -> bool:
+    """Qwen3 'thinks' by default and can burn the whole max_tokens budget on it.
+
+    llm_disable_thinking: "auto" (default) -> only for Qwen3 models, true/false to force.
+    """
+    setting = cfg.get("llm_disable_thinking", "auto")
+    if isinstance(setting, bool):
+        return setting
+    if str(setting).strip().lower() in {"true", "1", "yes", "on"}:
+        return True
+    if str(setting).strip().lower() in {"false", "0", "no", "off"}:
+        return False
+    return "qwen3" in Path(str(cfg.get("model_path", ""))).name.lower()
+
+
+def strip_thinking(text: str) -> str:
+    # With /no_think Qwen3 still emits an empty <think></think> block; drop any think block.
+    return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL).strip()
 
 
 UNSAFE_LICENSES = {
@@ -63,10 +95,10 @@ def allowed_sources(context: List[Candidate], cfg: Dict[str, Any]) -> List[Candi
         license_value = str((c.chunk.get("metadata") or {}).get("license", "unknown")).lower()
         is_blocked = any(b in license_value for b in UNSAFE_LICENSES)
         if is_blocked:
-            print(f"[WARN] Skipping blocked license chunk: {license_value}")
+            print(f"[WARN] Skipping blocked license chunk: {license_value}", file=sys.stderr)
             continue
         if license_value == "unknown" and not allow_unknown:
-            print(f"[WARN] Skipping unknown-license chunk (document: {c.chunk.get('chunk_id', 'n/a')})")
+            print(f"[WARN] Skipping unknown-license chunk (document: {c.chunk.get('chunk_id', 'n/a')})", file=sys.stderr)
             continue
         allowed.append(c)
     return allowed
@@ -99,7 +131,13 @@ def low_power_adjust(cfg: Dict[str, Any], force: bool = False) -> Dict[str, Any]
     return profile
 
 
-def build_prompt(query: str, context: List[Candidate], max_tokens: int, temperature: float) -> str:
+def build_prompt(
+    query: str,
+    context: List[Candidate],
+    max_tokens: int,
+    temperature: float,
+    no_think: bool = False,
+) -> str:
     lines: List[str] = []
     lines.append("You are a practical, concise survival assistant for offline field use.")
     lines.append("Use only the provided local context. Never invent details not present in context.")
@@ -123,7 +161,8 @@ def build_prompt(query: str, context: List[Candidate], max_tokens: int, temperat
         lines.append(snippet[:1200])
         lines.append("")
 
-    lines.append(f"User question: {query}")
+    # Qwen3 soft switch: "/no_think" in the user turn disables the reasoning block.
+    lines.append(f"User question: {query}" + (" /no_think" if no_think else ""))
     lines.append("Respond in short steps + include citations [1], [2] where applicable.")
 
     return "\n".join(lines)
@@ -132,9 +171,12 @@ def build_prompt(query: str, context: List[Candidate], max_tokens: int, temperat
 def invoke_llm(cfg: Dict[str, Any], prompt: str) -> str:
     binary = str(cfg.get("llm_binary", "llama-cli"))
     model_path = str(cfg.get("model_path", "")).strip()
+    if model_path:
+        model_path = str(repo_path(model_path))
     max_tokens = int(cfg.get("max_tokens", 512))
     temperature = float(cfg.get("temperature", 0.2))
-    threads = str(int(cfg.get("llm_threads", 2)))
+    threads = str(int(cfg.get("llm_threads", 4)))
+    ctx_tokens = str(int(cfg.get("llm_context_tokens", 2048)))
 
     if not shutil.which(binary):
         return "(LOCAL LLM NOT FOUND) Configure llm_binary and install it before query mode."
@@ -146,8 +188,12 @@ def invoke_llm(cfg: Dict[str, Any], prompt: str) -> str:
         return f"(MODEL NOT FOUND) Missing {model_path}. Set up offline model file first."
 
     # A soft compatibility matrix for common runners.
-    if binary == "llama-cli":
-        cmd = [binary, "-m", model_path, "-p", prompt, "--temp", str(temperature), "-n", str(max_tokens)]
+    if Path(binary).name in {"llama-cli", "llama-completion"}:
+        cmd = [
+            binary, "-m", model_path, "-p", prompt,
+            "--temp", str(temperature), "-n", str(max_tokens),
+            "-t", threads, "-c", ctx_tokens,
+        ]
     elif binary == "llama.cpp":
         cmd = [binary, "-m", model_path, "-p", prompt, "-n", str(max_tokens), "-c", str(int(cfg.get("llm_context_tokens", 2048))), "--threads", threads]
     else:
@@ -165,11 +211,11 @@ def invoke_llm(cfg: Dict[str, Any], prompt: str) -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            timeout=120,
+            timeout=int(cfg.get("llm_timeout_s", 180)),
         )
         if proc.returncode != 0:
             return f"(LLM ERROR code={proc.returncode})\n{proc.stdout or ''}"
-        return proc.stdout.strip() or "No output from model."
+        return strip_thinking(proc.stdout) or "No output from model."
     except subprocess.TimeoutExpired:
         return "(LLM TIMEOUT) Response timed out. Try again with fewer tokens/context."
     except Exception as exc:
@@ -246,9 +292,9 @@ def main() -> int:
 
     cfg = load_config(Path(args.config))
 
-    index_path = Path(args.index or cfg.get("index_path", "data/index/index.json"))
+    index_path = Path(args.index) if args.index else repo_path(cfg.get("index_path", "data/index/index.json"))
     if not index_path.exists():
-        print(f"Index not found at {index_path}. Run ingest_booklist.py first.")
+        print(f"Index not found at {index_path}. Run ./scripts/setup.sh (or ingest_booklist.py) first.")
         return 2
 
     model = build_model(cfg)
@@ -286,7 +332,13 @@ def main() -> int:
         selected = context[: int(profile.get("context_k", 6))]
 
         context_text = "\n\n".join([f"[{i+1}] {c.chunk.get('text','')}" for i, c in enumerate(selected)])
-        prompt = build_prompt(query, selected, int(profile.get("max_tokens", 512)), float(profile.get("temperature", 0.2)))
+        prompt = build_prompt(
+            query,
+            selected,
+            int(profile.get("max_tokens", 512)),
+            float(profile.get("temperature", 0.2)),
+            no_think=wants_no_think(profile),
+        )
 
         if args.offline:
             answer = fallback_answer(query, selected, conf)
@@ -324,7 +376,7 @@ def main() -> int:
                 payload["power_warning"] = "battery_critical"
         payload["power_mode"] = profile.get("power_mode", "normal")
 
-        append_audit(Path("logs/chat-audit.jsonl"), {
+        append_audit(ROOT_DIR / "logs" / "chat-audit.jsonl", {
             "ts": datetime.now(timezone.utc).isoformat(),
             "query": query,
             "confidence": conf,

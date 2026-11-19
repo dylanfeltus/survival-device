@@ -3,6 +3,19 @@
 
 Green phosphor aesthetic, optimized for 320x240 TFT framebuffer display.
 Works in standard terminals with curses or falls back to simple print mode.
+
+On the device, the 2.8" ILI9341 SPI panel is driven by the kernel (fbtft / DRM overlay)
+as a framebuffer; the Linux text console is mapped onto it and this curses UI runs on
+that console (see scripts/ui-tft.sh and docs/wiring.md). No framebuffer-specific
+drawing code is needed, and the same UI keeps working in any terminal.
+
+Controls
+  Keyboard: type + Enter to ask, Tab toggles input/scroll, arrows scroll/switch tabs,
+            PgUp/PgDn history, q quits.
+  Rotary encoder (optional, "encoder" in config/default.json):
+            rotate = scroll the answer, or switch tabs when the tab bar has focus
+            push   = submit the typed query if there is one, otherwise toggle focus
+                     between the tab bar and the answer (select)
 """
 
 from __future__ import annotations
@@ -22,6 +35,14 @@ try:
     CHAT_AVAILABLE = True
 except ImportError:
     CHAT_AVAILABLE = False
+
+# Optional hardware input (rotary encoder). Missing gpiod -> keyboard only.
+try:
+    from hw_input import start_encoder_from_config
+except Exception:  # pragma: no cover - depends on host
+    start_encoder_from_config = None
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
 # ============================================================================
@@ -45,6 +66,15 @@ def load_ui_config() -> Dict[str, Any]:
         "color_warn": "yellow",
         "splash_duration_s": 2,
     }
+
+
+def load_device_config() -> Dict[str, Any]:
+    """Load config/default.json (hardware + LLM settings). Empty dict if unreadable."""
+    try:
+        with open(ROOT_DIR / "config" / "default.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 def load_runtime_state() -> Dict[str, Any]:
@@ -87,6 +117,7 @@ class AppState:
         self.input_mode = True  # True = query input, False = answer scroll
         self.thinking = False
         self.error_message = ""
+        self.focus = "content"  # rotary encoder focus: "tabs" or "content"
         
     def add_to_history(self, qa: QAPair):
         """Add Q&A pair to history, respecting max limit."""
@@ -139,11 +170,13 @@ def query_chat(query: str, tab_name: str) -> Dict[str, Any]:
         # Shell out to chat.py with --json flag
         import subprocess
         cmd = [sys.executable, str(Path(__file__).parent / "chat.py"), "--json", query]
+        # Leave headroom over chat.py's own LLM timeout (slow on a Cortex-A53).
+        llm_timeout = int(load_device_config().get("llm_timeout_s", 180))
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=llm_timeout + 30,
         )
         
         if result.returncode != 0:
@@ -188,9 +221,10 @@ def query_chat(query: str, tab_name: str) -> Dict[str, Any]:
 class CursesUI:
     """Curses-based UI renderer."""
     
-    def __init__(self, stdscr, state: AppState):
+    def __init__(self, stdscr, state: AppState, encoder=None):
         self.stdscr = stdscr
         self.state = state
+        self.encoder = encoder
         self.setup_colors()
         curses.curs_set(0)  # Hide cursor
         self.stdscr.nodelay(1)  # Non-blocking input
@@ -271,10 +305,10 @@ class CursesUI:
             try:
                 if is_current:
                     tab_str = f"[{name}]"
-                    self.stdscr.addstr(
-                        y, x, tab_str,
-                        curses.color_pair(self.COLOR_HIGHLIGHT) | curses.A_BOLD
-                    )
+                    attr = curses.color_pair(self.COLOR_HIGHLIGHT) | curses.A_BOLD
+                    if self.state.focus == "tabs":
+                        attr |= curses.A_REVERSE  # encoder is switching tabs
+                    self.stdscr.addstr(y, x, tab_str, attr)
                 else:
                     tab_str = f"─{name}─"
                     self.stdscr.addstr(y, x, tab_str, curses.color_pair(self.COLOR_DIM))
@@ -329,6 +363,7 @@ class CursesUI:
                 "",
                 "  Type your question and press Enter.",
                 "  Use arrow keys to navigate.",
+                "  Knob: turn=scroll, push=select.",
                 "",
             ]
             for i, line in enumerate(welcome_lines):
@@ -470,8 +505,32 @@ class CursesUI:
         
         self.stdscr.refresh()
     
+    def handle_encoder(self) -> None:
+        """Apply pending rotary encoder events (no-op without an encoder)."""
+        if self.encoder is None:
+            return
+        while True:
+            ev = self.encoder.poll()
+            if ev is None:
+                return
+            if ev in ("cw", "ccw"):
+                step = 1 if ev == "cw" else -1
+                if self.state.focus == "tabs":
+                    self.state.current_tab = (self.state.current_tab + step) % len(self.state.tab_names)
+                else:
+                    lines = self.state.config.get("scroll_lines", 3)
+                    self.state.input_mode = False
+                    self.state.scroll_offset = max(0, self.state.scroll_offset + step * lines)
+            elif ev == "press":
+                if self.state.query_text and not self.state.thinking:
+                    self.submit_query()  # submit
+                else:
+                    # select: tab bar <-> answer
+                    self.state.focus = "content" if self.state.focus == "tabs" else "tabs"
+
     def handle_input(self) -> bool:
         """Handle keyboard input. Returns False if should quit."""
+        self.handle_encoder()
         try:
             key = self.stdscr.getch()
         except curses.error:
@@ -651,13 +710,22 @@ def main():
     config = load_ui_config()
     state = AppState(config)
     
+    encoder = None
+    if start_encoder_from_config is not None:
+        encoder, msg = start_encoder_from_config(load_device_config())
+        if encoder is None and "disabled" not in msg:
+            print(f"[WARN] {msg} (keyboard input still works)", file=sys.stderr)
+
     # Try curses mode first
     try:
-        curses.wrapper(lambda stdscr: CursesUI(stdscr, state).run())
+        curses.wrapper(lambda stdscr: CursesUI(stdscr, state, encoder=encoder).run())
     except Exception as e:
         # Fall back to simple mode
         print(f"Curses mode failed ({e}), using fallback mode...")
         run_fallback_mode(state)
+    finally:
+        if encoder is not None:
+            encoder.stop()
 
 
 if __name__ == "__main__":

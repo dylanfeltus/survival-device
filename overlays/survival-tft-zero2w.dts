@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: MIT
+//
+// Example device-tree overlay for the Survival AI Device on an Orange Pi Zero 2W (H618).
+//
+//   SPI1 CS0 -> 2.8" red-PCB TFT, ILI9341 (fbtft "fb_ili9341" -> /dev/fbN)
+//   SPI1 CS1 -> /dev/spidev1.1 for the round GC9A01 status display (userspace,
+//               scripts/status_display.py)
+//
+// Pins follow docs/wiring.md. GPIO specifiers are <&pio BANK PIN FLAGS> with
+// BANK: C=2, H=7, I=8 (Allwinner sunxi binding); FLAGS 0 = active high, 1 = active low.
+//
+// Do NOT also enable the stock "spi1-cs0-cs1-spidev" overlay: it claims the same
+// chip selects.
+//
+// TODO(verify on hardware):
+//  - that your kernel has fbtft's fb_ili9341 (`modinfo fb_ili9341`). fbtft lives in
+//    drivers/staging and may not be built on every image; alternatives are the DRM
+//    "ili9341" tiny driver or "panel-mipi-dbi" (both still give a /dev/fbN console).
+//  - that the panel really is an ILI9341 (same red PCB is sometimes sold with ST7789).
+//  - rotate/bgr: adjust if the image is mirrored, rotated or red/blue swapped.
+//  - spi-max-frequency: lower to 16000000 if you see corruption on long jumper wires.
+//
+// Build + install (see README "Hardware bring-up", step 5):
+//   dtc -@ -I dts -O dtb -o survival-tft-zero2w.dtbo overlays/survival-tft-zero2w.dts
+//   Armbian:        sudo armbian-add-overlay overlays/survival-tft-zero2w.dts
+//   Orange Pi OS:   copy the .dtbo to /boot/overlay-user/ and add
+//                   "user_overlays=survival-tft-zero2w" to /boot/orangepiEnv.txt
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "allwinner,sun50i-h616";
+
+	fragment@0 {
+		target-path = "/aliases";
+		__overlay__ {
+			spi1 = "/soc/spi@5011000";   // so the bus shows up as spidev1.x
+		};
+	};
+
+	fragment@1 {
+		target = <&spi1>;
+		__overlay__ {
+			status = "okay";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-names = "default";
+			// PH6 SCLK (pin 23), PH7 MOSI (pin 19), PH8 MISO (pin 21),
+			// PH5 CS0 (pin 24), PH9 CS1 (pin 26)
+			pinctrl-0 = <&spi1_pins>, <&spi1_cs0_pin>, <&spi1_cs1_pin>;
+
+			tft@0 {
+				compatible = "ilitek,ili9341";
+				reg = <0>;
+				spi-max-frequency = <32000000>;
+				rotate = <90>;                  // landscape 320x240
+				bgr;
+				fps = <20>;
+				buswidth = <8>;
+				dc-gpios = <&pio 7 4 0>;        // PH4  = header pin 18 (DC)
+				reset-gpios = <&pio 8 6 1>;     // PI6  = header pin 22 (RESET, active low)
+				debug = <0>;
+			};
+
+			spidev@1 {
+				compatible = "rohm,dh2228fv";   // spidev, same as Orange Pi's own overlay
+				reg = <1>;
+				spi-max-frequency = <32000000>;
+			};
+
+			// Resistive touch (XPT2046, ADS7846-compatible) is wired but NOT enabled:
+			// both hardware chip selects are taken, so it would need a GPIO chip select
+			// (cs-gpios on spi1, e.g. PI4 = pin 38) and an IRQ (PI3 = pin 40).
+			// TODO: unverified whether the sun6i SPI driver honours cs-gpios on this
+			// kernel. Sketch, if you want to try:
+			//   cs-gpios = <0>, <0>, <&pio 8 4 1>;
+			//   touch@2 {
+			//       compatible = "ti,ads7846";
+			//       reg = <2>;
+			//       spi-max-frequency = <2000000>;
+			//       interrupt-parent = <&pio>;
+			//       interrupts = <8 3 2>;        // PI3, falling edge
+			//       pendown-gpio = <&pio 8 3 1>;
+			//       ti,x-plate-ohms = /bits/ 16 <60>;
+			//       ti,pressure-max = /bits/ 16 <255>;
+			//   };
+		};
+	};
+};
