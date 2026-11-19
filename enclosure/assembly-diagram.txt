@@ -3,69 +3,71 @@
 ║                    (Not to scale — conceptual layout)                      ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
+  Real build stack: Orange Pi Zero 2W 4GB + SeenGreat Pi Zero UPS HAT (B) with a
+  flat LiPo pouch cell + jumper-wired 2.8" SPI TFT + round SPI TFT + rotary encoder.
+  Wiring: docs/wiring.md.  ⚠️ Dimensions marked TODO are not measured yet; the
+  SCAD file still has the old 18650/LCD-HAT geometry.
+
                            ╔══════════════════════╗
-                           ║   TOP SHELL          ║  ← LCD window cutout
-                           ║                      ║    Rotary encoder hole
-                           ║   ┌────────────┐    ║    M3 screw holes (4×)
-                           ║   │ LCD WINDOW │ ●  ║    Ventilation slots
-                           ║   │  (57×43mm) │    ║
-                           ║   └────────────┘    ║
+                           ║   TOP SHELL          ║  ← 2.8" TFT window
+                           ║   ┌────────────┐  ◯  ║    Round display window (TODO)
+                           ║   │ TFT WINDOW │     ║    Rotary encoder hole
+                           ║   │  (TODO mm) │  ●  ║    M3 screw holes (4×)
+                           ║   └────────────┘     ║    Ventilation slots
                            ╚══════════════════════╝
                                      ▲
-                                     │  (Screws connect here)
+                                     │  (panels + encoder fixed to top shell,
+                                     │   jumper wires down to the 40-pin header)
                                      │
-                           ╔══════════════════════╗
-                           ║  Waveshare 2.8" LCD  ║  ← HAT-style board
-                           ║  ┌────────────────┐  ║    Connects via 26-pin GPIO
-                           ║  │ 2.8" Display  │  ║    PCB: 65×56mm
-                           ║  │ Active Screen │  ║
-                           ║  └────────────────┘  ║
-                           ║   GPIO Pins (26)     ║
-                           ╚══════════════════════╝
-                                     ▲
-                                     │  (GPIO header connects through)
-                                     │
+        ╔══════════════════════╗  ╔══════════════╗  ╔══════════════╗
+        ║ 2.8" red-PCB SPI TFT ║  ║ Round SPI TFT║  ║ Rotary       ║
+        ║ ILI9341 + XPT2046?   ║  ║ GC9A01 240²? ║  ║ encoder      ║
+        ║ 240×320, resistive   ║  ║ blue breakout║  ║ CLK DT SW    ║
+        ║ touch, 14-pin header ║  ║ SPI1 CS1     ║  ║ + GND (3.3V) ║
+        ║ SPI1 CS0 (NOT a HAT) ║  ╚══════╤═══════╝  ╚══════╤═══════╝
+        ╚══════════╤═══════════╝         │                 │
+                   └──────────┬──────────┴─────────────────┘
+                              │  jumper wires (see docs/wiring.md)
+                              ▼
                            ╔══════════════════════╗
                            ║ Orange Pi Zero 2W    ║  ← Main SBC
                            ║  ┌──────────────┐    ║    PCB: 65×30mm
                            ║  │ Quad-core    │    ║    Ports on edge:
                            ║  │ Cortex-A53   │ ■■ ║      ■ USB-C power
-                           ║  │ 1GB RAM      │ ■■ ║      ■ Micro-HDMI
-                           ║  └──────────────┘ ■■ ║      ■ USB 2.0
-                           ║   40-pin GPIO header ║
+                           ║  │ 4GB RAM      │ ■■ ║      ■ HDMI
+                           ║  └──────────────┘ ■■ ║      ■ USB (verify positions)
+                           ║   40-pin header      ║    Header soldered/press-fit
+                           ║   WiFi antenna ⌁     ║    Antenna on board connector
                            ╚══════════════════════╝
                                      ▲
-                                     │  (Connects via GPIO/pogo pins)
+                                     │  spring pogo pins press on the underside
+                                     │  of the header (5V/GND/I2C) — standoff
+                                     │  height sets the contact pressure
+                           ╔══════════════════════╗
+                           ║ SeenGreat Pi Zero    ║  ← UPS / charger board
+                           ║ UPS HAT (B) Rev 1.5  ║    USB-C input
+                           ║  ┌──────────────┐    ║    5–24V solar terminal block
+                           ║  │ Charger+MPPT │    ║    MPPT DIP switch (ONE on, =Vmp)
+                           ║  │ INA219 @0x43 │    ║    Power switch
+                           ║  └──────────────┘    ║    2-pin battery connector
+                           ╚══════════════════════╝
+                                     ▲
+                                     │  2-pin lead
                                      │
                            ╔══════════════════════╗
-                           ║  UPS HAT B (Pi Zero) ║  ← Power management board
-                           ║  ┌──────────────┐    ║    PCB: 65×30mm
-                           ║  │ Charging IC  │    ║    Manages 18650 batteries
-                           ║  │ 5V Regulator │    ║    Provides stable 5V output
-                           ║  └──────────────┘    ║
-                           ║   Pogo/GPIO pins     ║
+                           ║  LiPo pouch cell     ║  ← flat 3.7V cell
+                           ║  ┌────────────────┐  ║    Foam-padded, never clamped
+                           ║  │  3.7V  LiPo    │  ║    Dimensions: TODO (measure)
+                           ║  └────────────────┘  ║
                            ╚══════════════════════╝
                                      ▲
-                                     │  (Battery terminals connect below)
-                                     │
-                           ╔══════════════════════╗
-                           ║  Battery Holder      ║  ← Holds 2× 18650 cells
-                           ║   ┌─────┐  ┌─────┐  ║    Side-by-side
-                           ║   │18650│  │18650│  ║    Total: ~65×36×18mm
-                           ║   │ [+] │  │ [+] │  ║    ~20mm holder height
-                           ║   │  │  │  │  │  │  ║
-                           ║   └──┴──┘  └──┴──┘  ║
-                           ╚══════════════════════╝
-                                     ▲
-                                     │
                                      │
                            ╔══════════════════════╗
                            ║   BOTTOM SHELL       ║  ← Base enclosure
                            ║                      ║    M3 heat-set inserts (4×)
-                           ║  [vent] [vent]       ║    Port cutouts (side)
-                           ║                      ║    Ventilation slots
+                           ║  [vent] [vent]       ║    Side cutouts: HAT USB-C,
+                           ║                      ║      solar terminal, Pi ports
                            ║     (Standoffs)      ║    Lanyard loop
-                           ║                      ║
                            ╚══════════════════════╝
 
 
@@ -74,29 +76,27 @@
 ╚════════════════════════════════════════════════════════════════════════════╝
 
     ┌────────────────────────────────────────────┐ ← Top shell (2.5mm wall)
-    │ ┌─────────────────────────────────┐        │
-    │ │      LCD Display Window         │   ●    │ ← Rotary encoder
+    │ ┌─────────────────────────────────┐  ◯  ●  │ ← round TFT, encoder
+    │ │      2.8" TFT Window            │        │
     │ └─────────────────────────────────┘        │
     ├────────────────────────────────────────────┤
-    │   ╔════════════════════════════╗           │ ← LCD HAT (65×56mm)
-    │   ║ Waveshare 2.8" LCD         ║           │
-    │   ╚═╤══════════════════════════╝           │
-    │     │ GPIO pins (26-pin)                   │
-    ├─────┴──────────────────────────────────────┤
+    │   ╔════════════════════════════╗           │ ← 2.8" TFT (on top-shell
+    │   ║ 2.8" SPI TFT (red PCB)     ║           │   standoffs, not a HAT)
+    │   ╚════════════════════════════╝           │
+    │        ┆┆┆┆ jumper wires                   │
+    ├────────┴┴┴┴────────────────────────────────┤
     │   ╔════════════════════════════╗           │ ← Orange Pi Zero 2W
-    │   ║ Orange Pi Zero 2W      ■■■ ║═══════════╡ ← Ports (USB-C, HDMI, USB)
+    │   ║ Orange Pi Zero 2W      ■■■ ║═══════════╡ ← Ports
     │   ╚═╤══════════════════════════╝           │
-    │     │ GPIO header (40-pin)                 │
+    │     ┊ pogo pins (spring contact)           │
     ├─────┴──────────────────────────────────────┤
-    │   ╔════════════════════════════╗           │ ← UPS HAT B
-    │   ║ UPS HAT B                  ║           │
+    │   ╔════════════════════════════╗           │ ← SeenGreat UPS HAT (B)
+    │   ║ UPS HAT (B)  USB-C  solar  ║═══════════╡ ← USB-C in / solar terminal
     │   ╚═╤══════════════════════════╝           │
-    │     │ Power connection                     │
+    │     │ 2-pin battery lead                   │
     ├─────┴──────────────────────────────────────┤
-    │    ┌──────────┐    ┌──────────┐           │ ← 18650 Batteries
-    │    │  18650   │    │  18650   │           │   (side-by-side)
-    │    │  Battery │    │  Battery │           │
-    │    └──────────┘    └──────────┘           │
+    │   ┌────────────────────────────────┐       │ ← LiPo pouch cell (flat)
+    │   └────────────────────────────────┘       │
     └────────────────────────────────────────────┘ ← Bottom shell
          ▼ ▼ ▼                        ▼
         [Vent slots]                [Port access]
@@ -109,17 +109,15 @@
     ╔═══════════════════════════════════════════════════════════╗
     ║                                                  ○        ║ ← Lanyard
     ║   [===]  ┌─────────────────────────┐  [===]              ║   loop
-    ║          │                         │                     ║
-    ║          │    LCD Display Window   │        ●           ║ ← Rotary
-    ║          │      (57 × 43 mm)       │                     ║   encoder
-    ║   ●      │                         │              ●      ║
+    ║          │                         │          ◯          ║ ← Round TFT
+    ║          │   2.8" TFT Window       │                     ║   (TODO)
+    ║          │      (TODO mm)          │          ●          ║ ← Rotary
+    ║   ●      │                         │              ●      ║   encoder
     ║          └─────────────────────────┘                     ║
     ║                                                           ║
     ║   [===]                                        [===]     ║ ← Vent
-    ║                                                           ║   slots
-    ║                                                           ║
-    ║   ●                                                  ●    ║ ← M3 screw
-    ╚═══════════════════════════════════════════════════════════╝   locations
+    ║   ●                                                  ●    ║ ← M3 screws
+    ╚═══════════════════════════════════════════════════════════╝
 
 
 ╔════════════════════════════════════════════════════════════════════════════╗
@@ -128,17 +126,13 @@
 
     ╔═══════════════════════════════════════════════════════════╗
     ║   ●                                                  ●    ║
-    ║                                                           ║
     ║   [===]                                        [===]     ║ ← Vent
-    ║                                                           ║   slots
     ║          ┌─────────────────────────┐                     ║
-    ║          │   Battery Compartment   │                     ║
-    ║   ●      │   (2× 18650 access)     │              ●      ║ ← M3 heat-
+    ║          │  LiPo pouch cell bay    │                     ║
+    ║   ●      │  (padded, TODO size)    │              ●      ║ ← M3 heat-
     ║          └─────────────────────────┘                     ║   set inserts
-    ║                                                           ║
     ║   [===]                                        [===]     ║
-    ║                                               ■■■        ║ ← Port
-    ║                                                           ║   access
+    ║                              ■ HAT USB-C   ▤ solar  ■■   ║ ← Port access
     ║   ●                                                  ●    ║   (side)
     ╚═══════════════════════════════════════════════════════════╝
 
@@ -169,18 +163,19 @@
 ║                        COMPONENT STACK HEIGHTS                             ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 
-    Total Internal Height: ~47mm
+    ⚠️ TODO — re-measure for the real stack. None of these heights are confirmed:
 
     ├─ Bottom shell floor: 2mm
-    ├─ Battery compartment: 18-20mm (battery + holder)
-    ├─ UPS HAT PCB: 1.6mm
-    ├─ Spacing/standoffs: 2mm
-    ├─ Orange Pi Zero PCB: 1.6mm + 3mm (components)
-    ├─ GPIO pins/standoffs: 8mm
-    ├─ LCD HAT PCB: 1.6mm + 3mm (components)
-    └─ Top shell clearance: 5mm
+    ├─ LiPo pouch cell + foam padding: TODO (pouch thickness + ~1mm)
+    ├─ SeenGreat UPS HAT (B) PCB + components: TODO
+    ├─ Standoffs HAT → Pi (sets pogo-pin compression): TODO (critical!)
+    ├─ Orange Pi Zero 2W PCB + header: 1.6mm + TODO
+    ├─ Jumper-wire bend clearance above header: TODO (Dupont housings ~14mm+)
+    ├─ 2.8" TFT module (on top-shell standoffs): TODO
+    └─ Top shell clearance: TODO
 
-    External dimensions: 75mm × 65mm × 52mm
+    Old concept (2×18650 + LCD HAT): 75 × 65 × 52 mm external. The 2.8" red-PCB
+    module alone is wider than the old 65×56mm HAT assumption — check before printing.
 
 
 ╔════════════════════════════════════════════════════════════════════════════╗
@@ -192,33 +187,31 @@
             Install 4× M3 heat-set inserts in corner bosses
             Use soldering iron at 220°C (PLA) or 250°C (PETG)
 
-    STEP 2: Install Batteries
+    STEP 2: Battery
             ↓
-            Place 2× 18650 batteries in compartment (side-by-side)
-            Ensure polarity matches battery holder markings
+            Lay the LiPo pouch cell in its padded bay (no clamping/puncture risk)
 
-    STEP 3: Mount UPS HAT B
+    STEP 3: Mount SeenGreat UPS HAT (B)
             ↓
-            Connect to battery holder terminals
-            Secure to standoffs with M2.5 screws
+            Power switch OFF
+            Plug the pouch cell into the 2-pin connector (check polarity)
+            (Solar) set MPPT DIP switch to panel Vmp — only ONE position ON
 
     STEP 4: Install Orange Pi Zero 2W
             ↓
-            Connect to UPS HAT via GPIO/pogo pins
-            Align ports with side cutouts
-            Secure with M2.5 screws
+            Header soldered/press-fit first
+            Seat on the HAT's pogo pins, fasten standoffs evenly
+            Switch HAT ON → board boots on battery; `i2cdetect` shows 0x43
 
-    STEP 5: Connect LCD HAT
+    STEP 5: Wire Displays + Encoder (jumper wires, docs/wiring.md)
             ↓
-            Attach to Orange Pi 26-pin GPIO header
-            Verify display window alignment
-            Secure to top standoffs with M2.5 screws
+            2.8" TFT on SPI1 CS0, round TFT on SPI1 CS1, encoder on PI12/PI2/PI16
+            All modules powered from 3.3V; TFT SDO/MISO left unconnected
 
-    STEP 6: Mount Rotary Encoder (in Top Shell)
+    STEP 6: Mount Panels + Encoder in Top Shell
             ↓
-            Thread shaft through hole
-            Secure body with hot glue or tape
-            Attach knob to shaft
+            TFT behind the main window, round TFT behind its window
+            Thread encoder shaft, secure body, attach knob
 
     STEP 7: Close Enclosure
             ↓
@@ -228,8 +221,8 @@
 
     STEP 8: Final Testing
             ↓
-            Connect USB-C power
-            Verify display, ports, and encoder function
+            USB-C into the HAT; unplug and confirm it stays up on battery
+            Verify TFT, round display, encoder, battery % in the UI
             Thermal test (30 minutes runtime)
 
 

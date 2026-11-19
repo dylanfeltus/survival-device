@@ -22,3 +22,10 @@ logs/*.log
 
 # Node (if used)
 node_modules/
+
+# Generated search index (built by scripts/setup.sh / ingest_booklist.py)
+data/index/index.json
+
+# Downloaded LLM weights (scripts/download_model.sh)
+models/*.gguf
+models/*.part

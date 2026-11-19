@@ -1,51 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Basic battery-awareness loop.
-# Writes a tiny runtime state file for UI + chat to consume.
+# Battery-awareness loop.
+# Writes data/runtime/state.json for the UI, chat.py and the round status display,
+# logs low/critical transitions, and performs a safe shutdown when the battery stays
+# critical (and is not charging) for battery_shutdown_confirm_reads readings.
+#
+# Battery source: INA219 on the SeenGreat Pi Zero UPS HAT (B) at 0x43 (configurable),
+# falling back to sysfs power_supply nodes. See config/default.json "ina219_*" and
+# "battery_*" keys. If the chip is not found, the daemon keeps running and logs a hint.
+#
+# Usage: scripts/power_daemon.sh [interval_seconds] [--dry-run]
+# Run as root (e.g. from a systemd unit) so the shutdown command is allowed.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CFG="${ROOT_DIR}/config/default.json"
 STATE="${ROOT_DIR}/data/runtime/state.json"
 LOGFILE="${ROOT_DIR}/logs/power-daemon.log"
 INTERVAL_SECONDS="${1:-30}"
+shift || true
 
 mkdir -p "$(dirname "$LOGFILE")" "$(dirname "$STATE")"
 
-echo "Starting power daemon. interval=${INTERVAL_SECONDS}s" | tee -a "$LOGFILE"
-
-while true; do
-  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  mode="normal"
-
-  if command -v python3 >/dev/null 2>&1; then
-    mode=$(python3 - <<PY
-import json
-from pathlib import Path
-from scripts.power_profile import assess, dump_state
-
-cfg = {}
-try:
-    cfg = json.loads(Path("$CFG").read_text())
-except Exception:
-    cfg = {}
-
-state = assess(cfg)
-dump_state("$STATE", state)
-print(state.recommended_mode)
-PY
-)
-  fi
-
-  echo "[$stamp] mode=$mode" >> "$LOGFILE"
-
-  # Optional integration point:
-  # - if mode=ultra, we could pause UI updates or force low FPS.
-  if [ "$mode" = "ultra" ]; then
-    echo "[$stamp] recommend_power_mode=ultra -> enforce aggressive power limits" >> "$LOGFILE"
-  elif [ "$mode" = "reduced" ]; then
-    echo "[$stamp] recommend_power_mode=reduced -> lowering compute/context" >> "$LOGFILE"
-  fi
-
-  sleep "$INTERVAL_SECONDS"
-done
+exec python3 "${ROOT_DIR}/scripts/power_profile.py" \
+  --daemon \
+  --config "$CFG" \
+  --state "$STATE" \
+  --log "$LOGFILE" \
+  --interval "$INTERVAL_SECONDS" \
+  "$@"

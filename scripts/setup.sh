@@ -6,6 +6,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Options:
+#   --download-model[=NAME]  also fetch a GGUF model (NAME: qwen3-1.7b (default), gemma3-1b, qwen3-0.6b)
+#   --reindex                rebuild data/index/index.json even if it already exists
+DOWNLOAD_MODEL=""
+REINDEX=0
+for arg in "$@"; do
+    case "$arg" in
+        --download-model) DOWNLOAD_MODEL="qwen3-1.7b" ;;
+        --download-model=*) DOWNLOAD_MODEL="${arg#*=}" ;;
+        --reindex) REINDEX=1 ;;
+        -h|--help) sed -n 2,12p "$0"; exit 0 ;;
+        *) echo "Unknown option: $arg"; exit 2 ;;
+    esac
+done
+
 log() { printf "\033[0;32m✓\033[0m %s\n" "$*"; }
 warn() { printf "\033[0;33m!\033[0m %s\n" "$*"; }
 error() { printf "\033[0;31m✗\033[0m %s\n" "$*"; exit 1; }
@@ -90,7 +105,7 @@ fi
 log "Running self-tests..."
 
 # Test Python imports
-python3 - <<'PY'
+SURV_ROOT="$ROOT_DIR" python3 - <<'PY'
 import sys
 import json
 import os
@@ -107,7 +122,7 @@ except ImportError as e:
     errors.append(f"Missing standard library: {e}")
 
 # Test script imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(os.environ["SURV_ROOT"]) / "scripts"))
 try:
     import ingest_booklist
     import chat
@@ -127,7 +142,28 @@ if [ $? -ne 0 ]; then
     error "Self-test failed. Check Python installation."
 fi
 
-# 7. Summary
+# 7. Build the search index (generated locally; not committed to git)
+INDEX_PATH="${ROOT_DIR}/data/index/index.json"
+if [ "$REINDEX" -eq 1 ] || [ ! -f "$INDEX_PATH" ]; then
+    log "Building search index from the core survival pack..."
+    (cd "$ROOT_DIR" && python3 scripts/ingest_booklist.py \
+        --sources data/manifests/core-survival.json \
+        --sources-directory data/sources \
+        --index-path data/index/index.json)
+else
+    log "Search index already exists (use --reindex to rebuild)"
+fi
+
+# 8. Optional: download the recommended GGUF model
+if [ -n "$DOWNLOAD_MODEL" ]; then
+    "${ROOT_DIR}/scripts/download_model.sh" "$DOWNLOAD_MODEL" --set-config || warn "Model download failed; offline retrieval mode still works."
+else
+    echo ""
+    echo "  LLM model (optional): ./scripts/download_model.sh   # Qwen3 1.7B Q4_K_M -> models/"
+    echo ""
+fi
+
+# 9. Summary
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  🎉 Setup Complete!"
@@ -135,16 +171,13 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "  Quick Start:"
 echo ""
-echo "  1. Ingest content:"
-echo "     python3 scripts/ingest_booklist.py \\"
-echo "       --sources data/manifests/core-survival.json \\"
-echo "       --sources-directory data/sources \\"
-echo "       --index-path data/index/index.json"
+echo "  1. (Re)ingest content after adding sources:"
+echo "     ./scripts/setup.sh --reindex"
 echo ""
 echo "  2. Test offline search:"
 echo "     python3 scripts/chat.py --offline \"How do I purify water?\""
 echo ""
-echo "  3. Run with LLM (requires llama.cpp + model):"
+echo "  3. Run with LLM (requires llama.cpp + ./scripts/download_model.sh):"
 echo "     python3 scripts/chat.py \"How do I start a fire?\""
 echo ""
 echo "  4. Launch UI (framebuffer or terminal):"

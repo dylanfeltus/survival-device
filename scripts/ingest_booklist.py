@@ -147,7 +147,11 @@ def build_model(cfg: Dict[str, Any]) -> VectorModel:
             m = SentenceTransformer(model_name_or_path)
             return VectorModel(dim=dim, model=m, use_numpy=True)
         except Exception as exc:
-            print(f"[WARN] Could not load embedding model ({model_name_or_path}). Falling back to hash embeddings: {exc}")
+            # stderr, so `chat.py --json` stdout stays parseable for ui.py
+            print(
+                f"[WARN] Could not load embedding model ({model_name_or_path}). Falling back to hash embeddings: {exc}",
+                file=sys.stderr,
+            )
 
     # Optional: lightweight dependency in case present
     try:
@@ -215,6 +219,20 @@ def _normalize(vec: Sequence[float]):
     return vec / n
 
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def portable_path(path: Path) -> str:
+    """Store source paths relative to the repo so the index works on any machine.
+
+    Paths outside the repo (e.g. a USB drive of manuals) are kept absolute.
+    """
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def build_index(
     sources: List[Dict[str, Any]],
     sources_root: Path,
@@ -251,7 +269,8 @@ def build_index(
             print(f"[WARN] Empty file, skipped: {src_path}")
             continue
 
-        doc_id = hashlib.md5(str(src_path).encode("utf-8")).hexdigest()
+        rel_path = portable_path(src_path)
+        doc_id = hashlib.md5(rel_path.encode("utf-8")).hexdigest()
         title = doc.get("title", src_path.stem)
         source_name = doc.get("source", "unknown")
 
@@ -264,7 +283,7 @@ def build_index(
 
         doc_record = {
             "doc_id": doc_id,
-            "path": str(src_path),
+            "path": rel_path,
             "title": title,
             "source": source_name,
             "license": doc_license,
@@ -296,7 +315,7 @@ def build_index(
                         "source": doc_record["source"],
                         "license": doc_record["license"],
                         "source_url": doc_record["source_url"],
-                        "path": str(src_path),
+                        "path": rel_path,
                     },
                 }
             )

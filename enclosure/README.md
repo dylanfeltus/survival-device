@@ -1,7 +1,15 @@
 # Survival AI Device Enclosure
 
-Rugged 3D-printable case for Orange Pi Zero 2W + Waveshare 2.8" LCD + UPS HAT B  
+Rugged 3D-printable case for the real build stack:
+Orange Pi Zero 2W (4GB) + SeenGreat Pi Zero UPS HAT (B) with a flat LiPo pouch cell +
+jumper-wired red-PCB 2.8" SPI TFT + small round SPI TFT + rotary encoder.  
 **Design aesthetic:** Pip-Boy inspired tactical field device — chunky, functional, survival-ready.
+
+> ⚠️ **Status: the SCAD geometry has not been updated for this stack yet.** `surv-ai-case.scad`
+> still models the original concept: a Waveshare 2.8" LCD HAT, 2×18650 cells, and no round
+> display. Its battery bay, LCD window/standoffs and encoder hole need re-measuring against the
+> real parts (see the `TODO` block at the top of the file). The assembly order below already
+> describes the real stack. Wiring is in [`../docs/wiring.md`](../docs/wiring.md).
 
 ---
 
@@ -67,28 +75,36 @@ Use a soldering iron set to 200-220°C (for PLA) or 240-260°C (for PETG). Press
 3. Clean screw holes with M3 tap (optional, but recommended)
 4. Install M3 heat-set inserts in the 4 corner bosses of the **bottom shell**
 
-### Step 2: Install Batteries & UPS HAT
-1. Place 2× 18650 batteries in the bottom shell compartment (side-by-side)
-2. Secure battery holder (if using separate holder)
-3. Mount UPS HAT B on standoffs above batteries
-4. Secure with M2.5 screws (do NOT overtighten — PCBs are fragile)
+### Step 2: Install the LiPo pouch cell & SeenGreat UPS HAT (B)
+1. Lay the flat 3.7 V LiPo pouch cell in the bottom shell. Pad it with foam tape, never
+   clamp or puncture it, and keep it away from screw tips and sharp edges
+2. Mount the SeenGreat Pi Zero UPS HAT (B) on its standoffs with the **power switch OFF**
+3. Plug the cell into the HAT's 2-pin battery connector (⚠️ check polarity on the silkscreen)
+4. Leave the HAT's USB-C input and solar terminal block reachable through side cutouts.
+   The case has no separate MPPT controller: it's built into the HAT
 
-### Step 3: Install Orange Pi Zero 2W
-1. Connect Orange Pi to UPS HAT via GPIO/pogo pins
-2. Align carefully — pins are delicate
-3. Press gently until fully seated
-4. Verify USB-C, HDMI, and USB ports align with side cutouts
+### Step 3: Install Orange Pi Zero 2W (on the pogo pins)
+1. Solder or press-fit the 40-pin header first (the board ships without one)
+2. Set the Pi on top of the HAT so its spring **pogo pins** touch the underside of the header
+3. Fasten the standoffs. Their height sets the pogo-pin compression: too tall and the
+   contact is intermittent (the INA219 battery monitor drops out), too short and the pins bend
+4. Switch the HAT ON and check the Pi boots from battery before closing anything
+5. Verify the HAT's USB-C and the Pi's ports align with side cutouts
 
-### Step 4: Install LCD HAT
-1. Connect Waveshare LCD HAT to Orange Pi GPIO header
-2. Use spacers if needed to prevent strain on pins
-3. Secure with M2.5 screws to PCB standoffs
-4. Verify LCD active area aligns with top shell window
+### Step 4: Install the displays (jumper-wired)
+1. The 2.8" red-PCB SPI TFT is **not a HAT**: mount it behind the top-shell window
+   (standoffs/clips through its corner holes) and wire it with jumper wires per
+   `docs/wiring.md`. Leave its SDO/MISO pin unconnected
+2. Mount the small round SPI TFT (blue breakout) behind its own round window
+   (⚠️ needs a new cutout in the SCAD, TODO)
+3. Keep the shared SPI wires (SCK/MOSI/MISO) short and bundled. Long jumpers may need a lower
+   `spi-max-frequency` in the overlay
+4. Verify the TFT's active area aligns with the top shell window
 
-### Step 5: Install Rotary Encoder (KY-040)
+### Step 5: Install Rotary Encoder (CLK/DT/SW/+/GND module)
 1. Thread encoder shaft through hole in top shell
 2. Secure encoder body to underside of top shell with hot glue or double-sided tape
-3. Route wires to Orange Pi GPIO pins (connect before closing case)
+3. Wire CLK/DT/SW to the header pins in `docs/wiring.md`. Power `+` from **3.3 V, not 5 V**
 4. Attach encoder knob to shaft (press-fit or set screw)
 
 ### Step 6: Final Assembly
@@ -109,8 +125,9 @@ Use a soldering iron set to 200-220°C (for PLA) or 240-260°C (for PETG). Press
 ## 🧪 Testing
 
 After assembly:
-1. **Power test:** Connect USB-C power, verify LEDs light up
-2. **Display test:** Boot device, check LCD displays correctly
+1. **Power test:** Connect USB-C to the UPS HAT, verify LEDs light up. Unplug and check it stays up on battery
+2. **Battery monitor:** `python3 scripts/power_profile.py` reports `"battery_source": "ina219"` (if not, check standoff height / pogo contact)
+3. **Display test:** Boot device, check the 2.8" TFT (`./scripts/test-display.sh`) and the round status display
 3. **Port access:** Verify all USB/HDMI ports are accessible with cables
 4. **Encoder test:** Rotate knob, confirm input response
 5. **Thermal test:** Run device for 30 minutes, check for overheating (ventilation should prevent this)
@@ -121,6 +138,7 @@ After assembly:
 
 | Problem | Solution |
 |---------|----------|
+| **Battery % missing / INA219 not found** | Pogo pins not making contact: check standoff height and that the header is flush; confirm `i2cdetect` shows `43` |
 | **LCD doesn't fit window** | Adjust `lcd_active_width` / `lcd_active_height` variables in .scad file |
 | **Ports don't align** | Check Orange Pi orientation — may be 180° rotated |
 | **Case won't close** | Check for wire pinching, component interference, or warped print |
@@ -157,7 +175,7 @@ Add MOLLE clip mounting points, belt clip, or tripod mount threads.
 | **External Case** | 75 × 65 × 52 mm |
 | **Internal Cavity** | 70 × 60 × 47 mm |
 | **Weight (empty)** | ~80g (PLA), ~85g (PETG) |
-| **Weight (loaded)** | ~220g (with batteries & electronics) |
+| **Weight (loaded)** | TODO: weigh with pouch cell & electronics (old ~220g figure assumed 2×18650) |
 
 ---
 

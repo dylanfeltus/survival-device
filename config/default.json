@@ -1,5 +1,5 @@
 {
-  "model_path": "/opt/survival-ai/models/llm/llama-gguf.bin",
+  "model_path": "models/Qwen3-1.7B-Q4_K_M.gguf",
   "max_tokens": 512,
   "context_k": 6,
   "temperature": 0.2,
@@ -7,25 +7,36 @@
   "index_path": "data/index/index.json",
   "wake_word": false,
   "audio_enabled": false,
-
   "chunk_size_chars": 900,
   "chunk_overlap_chars": 120,
   "embedding_dim": 384,
   "embedding_model_path": "/opt/survival-ai/models/embeddings/all-MiniLM-L6-v2",
   "llm_binary": "llama-cli",
-  "llm_threads": 2,
+  "llm_threads": 4,
   "llm_top_k": 40,
   "llm_top_p": 0.9,
-  "llm_context_tokens": 1024,
+  "llm_context_tokens": 2048,
   "llm_extra_args": [],
-
+  "llm_disable_thinking": "auto",
+  "llm_timeout_s": 180,
   "min_confidence": 0.28,
   "fallback_mode": "retrieval_only",
-
   "battery_monitor_enabled": true,
   "battery_warn_pct": 20,
   "battery_critical_pct": 8,
-
+  "battery_shutdown_enabled": true,
+  "battery_shutdown_confirm_reads": 3,
+  "battery_shutdown_command": [
+    "systemctl",
+    "poweroff"
+  ],
+  "ina219_enabled": true,
+  "ina219_i2c_bus": "auto",
+  "ina219_i2c_controller": "5002400.i2c",
+  "ina219_address": "0x43",
+  "ina219_shunt_ohms": 0,
+  "ina219_charging_sign": "positive",
+  "ina219_charge_threshold_mv": 0.2,
   "allow_unknown_licenses": false,
   "default_license": "unknown",
   "blocked_license_keywords": [
@@ -33,5 +44,27 @@
     "copyrighted",
     "proprietary",
     "restricted"
-  ]
+  ],
+  "encoder": {
+    "enabled": false,
+    "gpio_chip": "auto",
+    "gpio_chip_label": "300b000.pinctrl",
+    "clk_line": 268,
+    "dt_line": 258,
+    "sw_line": 272,
+    "steps_per_detent": 4,
+    "poll_ms": 1,
+    "invert": false
+  },
+  "status_display": {
+    "enabled": false,
+    "spi_bus": 1,
+    "spi_device": 1,
+    "spi_speed_hz": 24000000,
+    "gpio_chip": "auto",
+    "gpio_chip_label": "300b000.pinctrl",
+    "dc_line": 256,
+    "rst_line": 271,
+    "refresh_s": 10
+  }
 }
